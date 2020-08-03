@@ -106,6 +106,8 @@ def run_training(
     date_str=None, iterations_per_loop=1000, keep_checkpoint_max=2, max_steps=int(1e10),
     warm_start_from=None,
     experimental_host_call_every_n_steps=50,
+    save_checkpoints_steps=1000, # save every loop
+    keep_checkpoint_every_n_hours=0.5, # keep every half hour
 ):
   tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -204,8 +206,10 @@ def run_training(
         per_host_input_for_training=tf.estimator.tpu.InputPipelineConfig.PER_HOST_V2,
         experimental_host_call_every_n_steps=experimental_host_call_every_n_steps,
       ),
-      save_checkpoints_secs=1600,  # 30 minutes
+      #save_checkpoints_secs=1600,  # 30 minutes
       keep_checkpoint_max=keep_checkpoint_max,
+      save_checkpoints_steps=save_checkpoints_steps,
+      keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours,
     ),
     warm_start_from=warm_start_from
   )
