@@ -179,7 +179,7 @@ def run_training(
     tpu_summary.scalar('train/gnorm', gnorm)
     tpu_summary.scalar('train/pnorm', utils.rms(trainable_variables))
     tpu_summary.scalar('train/lr', warmed_up_lr)
-    tpu_summary.image('real_images', reals, reduce_fn=lambda x: x[0])
+    tpu_summary.image('real_images', reals, reduce_fn=lambda x: x[0:9])
     return tf.estimator.tpu.TPUEstimatorSpec(
       mode=mode, host_call=tpu_summary.get_host_call(), loss=loss, train_op=train_op)
 
