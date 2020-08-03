@@ -112,7 +112,7 @@ def run_training(
   # Create checkpoint directory
   model_dir = os.path.join(
     log_dir,
-    datetime.now().strftime('%Y-%m-%d') if date_str is None else date_str,
+    #datetime.now().strftime('%Y-%m-%d') if date_str is None else date_str,
     exp_name
   )
   print('model dir:', model_dir)
