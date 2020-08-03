@@ -148,7 +148,8 @@ def run_training(
     assert isinstance(model, Model)
 
     # training loss
-    train_info_dict = model.train_fn(normalize_data(tf.cast(features['image'], tf.float32)), features['label'])
+    reals = normalize_data(tf.cast(features['image'], tf.float32))
+    train_info_dict = model.train_fn(reals, features['label'])
     loss = train_info_dict['loss']
     assert loss.shape == []
 
@@ -178,7 +179,7 @@ def run_training(
     tpu_summary.scalar('train/gnorm', gnorm)
     tpu_summary.scalar('train/pnorm', utils.rms(trainable_variables))
     tpu_summary.scalar('train/lr', warmed_up_lr)
-    tpu_summary.image('real_images', features['image'], reduce_fn=lambda x: x[0])
+    tpu_summary.image('real_images', reals, reduce_fn=lambda x: x[0])
     return tf.estimator.tpu.TPUEstimatorSpec(
       mode=mode, host_call=tpu_summary.get_host_call(), loss=loss, train_op=train_op)
 
