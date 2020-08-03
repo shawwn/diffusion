@@ -267,10 +267,17 @@ class TForkDataset:
       dataset = tf.data.TFRecordDataset(filename, buffer_size=buffer_mb<<20)
       return dataset
 
+    num_classes = 1
+    cycle_length_multiplier = 1
+    cycle_length = num_parallel_calls * cycle_length_multiplier
+    tf.logging.info("TForkDataset.make_dataset(data_dirs=%s, index=%d, num_hosts=%d, "
+                 "num_classes=%d, seed=%s, shuffle_filenames=%s, cycle_length=%d, cycle_length_multiplier=%d, num_parallel_calls=%s)",
+                 data_dirs, index, num_hosts, num_classes, seed, shuffle_filenames, cycle_length, cycle_length_multiplier, num_parallel_calls)
+
     # Read the data from disk in parallel
     dataset = dataset.apply(
         tf.contrib.data.parallel_interleave(
-            fetch_dataset, cycle_length=num_parallel_calls, sloppy=True))
+            fetch_dataset, cycle_length=cycle_length, sloppy=True))
 
     return dataset
 
