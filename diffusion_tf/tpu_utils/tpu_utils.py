@@ -182,7 +182,7 @@ def run_training(
     tpu_summary.scalar('train/pnorm', utils.rms(trainable_variables))
     tpu_summary.scalar('train/lr', warmed_up_lr)
     tpu_summary.image('real_images', reals, reduce_fn=lambda x: x[0:9])
-    tpu_summary.image('fake_images', fakes, reduce_fn=lambda x: x[0:9])
+    tpu_summary.image('fake_images', tf.clip_by_value(fakes, -1.0, 1.0), reduce_fn=lambda x: x[0:9])
     #tpu_summary.image('fake_images_noisy', fakes_noisy, reduce_fn=lambda x: x[0:9])
     return tf.estimator.tpu.TPUEstimatorSpec(
       mode=mode, host_call=tpu_summary.get_host_call(), loss=loss, train_op=train_op)
