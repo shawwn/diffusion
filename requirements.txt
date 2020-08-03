@@ -24,7 +24,7 @@ gast==0.2.2
 google-api-python-client==1.7.11
 google-auth==1.11.2
 google-auth-httplib2==0.0.3
-google-compute-engine==20191210.0
+#google-compute-engine==20191210.0
 google-pasta==0.1.8
 googleapis-common-protos==1.51.0
 grpcio==1.27.2
