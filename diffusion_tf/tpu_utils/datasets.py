@@ -189,7 +189,7 @@ class TForkDataset:
         data_dirs=self.tfr_file,
         index=TForkDataset._get_current_host(params),
         num_hosts=TForkDataset._get_num_hosts(params),
-        buffer_mb=self._buffer_mb,
+        buffer_mb=self.buffer_mb,
       )
 
       # cache the unparsed image data.
