@@ -172,14 +172,12 @@ class TForkDataset:
     max_images=None,     # Maximum number of images to use, None = use all images.
     shuffle_mb=4096,     # Shuffle data within specified window (megabytes), 0 = disable shuffling.
     buffer_mb=256,       # Read buffer size (megabytes).
-    batch_size=1,
   ):
     self.tfr_file           = tfr_file
     self.dtype              = 'int32'
     self.max_images         = max_images
     self.buffer_mb          = buffer_mb
     self.num_classes        = 1         # unconditional
-    self.batch_size         = batch_size
 
     # Determine shape and resolution.
     self.resolution = resolution
@@ -199,10 +197,11 @@ class TForkDataset:
       # fused shuffle and repeat.
       dset = dset.apply(tf.contrib.data.shuffle_and_repeat(1024 * 16))
       # parse the image data.
+      assert "batch_size" in params
       dset = dset.apply(
         tf.contrib.data.map_and_batch(
           dataset_parser_static,
-          batch_size=self.batch_size,
+          batch_size=params["batch_size"],
           num_parallel_batches=TForkDataset._get_num_cores(params),
           drop_remainder=True))
       # prefetch the dataset.
