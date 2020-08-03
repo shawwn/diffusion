@@ -176,7 +176,7 @@ def run_training(
       train_op = tf.group(ema_op)
 
     # summary
-    tpu_summary = TpuSummaries(model_dir, save_summary_steps=100)
+    tpu_summary = TpuSummaries(model_dir)
     tpu_summary.scalar('train/loss', loss)
     tpu_summary.scalar('train/gnorm', gnorm)
     tpu_summary.scalar('train/pnorm', utils.rms(trainable_variables))
