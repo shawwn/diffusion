@@ -129,9 +129,9 @@ def train(
   kwargs = dict(locals())
   ds = datasets.get_dataset(dataset, tfr_file=tfr_file)
   tpu_utils.run_training(
-    date_str='9999-99-99',
-    exp_name='{exp_name}_{dataset}_{model_name}_{optimizer}_bs{total_bs}_lr{lr}w{warmup}_beta{beta_start}-{beta_end}-{beta_schedule}_t{num_diffusion_timesteps}_{loss_type}_dropout{dropout}_randflip{randflip}_blk{block_size}'.format(
-      **kwargs),
+    date_str='9999-99-99', # datetime.datetime.now().strftime("%Y-%m-%d"),
+    #exp_name='{exp_name}_{dataset}_{model_name}_{optimizer}_bs{total_bs}_lr{lr}w{warmup}_beta{beta_start}-{beta_end}-{beta_schedule}_t{num_diffusion_timesteps}_{loss_type}_dropout{dropout}_randflip{randflip}_blk{block_size}'.format(**kwargs),
+    exp_name=exp_name,
     model_constructor=lambda: Model(
       model_name=model_name,
       betas=get_beta_schedule(
