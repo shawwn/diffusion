@@ -195,11 +195,11 @@ def run_training(
       tpu_config=tf.estimator.tpu.TPUConfig(
         iterations_per_loop=iterations_per_loop,
         num_shards=None,
-        per_host_input_for_training=tf.estimator.tpu.InputPipelineConfig.PER_HOST_V2
+        per_host_input_for_training=tf.estimator.tpu.InputPipelineConfig.PER_HOST_V2,
+        experimental_host_call_every_n_steps=experimental_host_call_every_n_steps,
       ),
       save_checkpoints_secs=1600,  # 30 minutes
       keep_checkpoint_max=keep_checkpoint_max,
-      experimental_host_call_every_n_steps=experimental_host_call_every_n_steps,
     ),
     warm_start_from=warm_start_from
   )
