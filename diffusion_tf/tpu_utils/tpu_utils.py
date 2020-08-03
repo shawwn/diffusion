@@ -132,6 +132,7 @@ def run_training(
     print('Global batch size: {}, local batch size: {}'.format(total_bs, local_bs))
     assert total_bs == num_tpu_replicas() * local_bs
 
+    print("Image shape:", features['image'].shape[0])
     assert mode == tf.estimator.ModeKeys.TRAIN, 'only TRAIN mode supported'
     assert features['image'].shape[0] == local_bs
     assert features['label'].shape == [local_bs] and features['label'].dtype == tf.int32

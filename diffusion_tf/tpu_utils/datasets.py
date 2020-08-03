@@ -161,7 +161,10 @@ def dataset_parser_static(record):
     image = tf.image.resize_image_with_pad(image, target_height=256, target_width=256, method=tf.image.ResizeMethod.AREA)
     image = tf.image.convert_image_dtype(image, tf.uint8)
     data = tf.cast(image, tf.int32)
+    data.set_shape([256, 256, 3])
     return pack(image=data, label=tf.constant(0, dtype=tf.int32))
+
+
 class TForkDataset:
   def __init__(self,
     tfr_file,            # Path to tfrecord file.
@@ -170,9 +173,6 @@ class TForkDataset:
     shuffle_mb=4096,     # Shuffle data within specified window (megabytes), 0 = disable shuffling.
     buffer_mb=256,       # Read buffer size (megabytes).
   ):
-    """Adapted from https://github.com/NVlabs/stylegan2/blob/master/training/dataset.py.
-    Use StyleGAN2 dataset_tool.py to generate tf record files.
-    """
     self.tfr_file           = tfr_file
     self.dtype              = 'int32'
     self.max_images         = max_images
@@ -216,12 +216,13 @@ class TForkDataset:
   @staticmethod
   def _make_dataset(self, data_dirs, index=0, num_hosts=1,
                    seed=0, shuffle_filenames=True,
-                   num_parallel_calls = 64):
+                   num_parallel_calls = 64, batch_size = 1):
 
     if shuffle_filenames:
       assert seed is not None
 
     file_patterns = [x.strip() for x in data_dirs.split(',') if len(x.strip()) > 0]
+    print(file_patterns)
 
     # For multi-host training, we want each hosts to always process the same
     # subset of files.  Each host only sees a subset of the entire dataset,
@@ -231,6 +232,7 @@ class TForkDataset:
       x = tf.data.Dataset.list_files(pattern, shuffle=shuffle_filenames, seed=seed)
       dataset = x if dataset is None else dataset.concatenate(x)
     dataset = dataset.shard(num_hosts, index)
+    print(dataset)
 
     def fetch_dataset(filename):
       buffer_size = 8 * 1024 * 1024  # 8 MiB per file
@@ -246,7 +248,10 @@ class TForkDataset:
         dataset_parser_static,
         num_parallel_calls=num_parallel_calls)
 
-    return dataset
+    dset = dataset.shuffle(50000)
+    dset = dset.batch(batch_size, drop_remainder=True)
+    dset = dset.prefetch(tf.data.experimental.AUTOTUNE)
+    return dset
 
 
   def train_input_fn(self, params):
