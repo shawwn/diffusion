@@ -118,9 +118,9 @@ def run_training(
   print('model dir:', model_dir)
   if tf.io.gfile.exists(model_dir):
     print('model dir already exists: {}'.format(model_dir))
-    if input('continue training? [y/n] ') != 'y':
-      print('aborting')
-      return
+    # if input('continue training? [y/n] ') != 'y':
+    #   print('aborting')
+    #   return
 
   # Save kwargs in json format
   if dump_kwargs is not None:
