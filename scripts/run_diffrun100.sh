@@ -7,10 +7,10 @@ export TPU_SPLIT_COMPILE_AND_EXECUTE=1
 export TF_TPU_WATCHDOG_TIMEOUT=1800
 export TPU_NAME="${TPU_NAME:-tpu-v2-256-euw4a-21}"
 
-export RUN_NAME="diffrun100c"
-export GIN_CONFIG="configs/diffrun100.gin"
-export BUCKET="dota-euw4a"
-export DATASET_FILES="datasets/danbooru2019-s/danbooru2019-s-0*"
+export RUN_NAME="${RUN_NAME:-diffrun100c}"
+export GIN_CONFIG="${GIN_CONFIG:-configs/diffrun100.gin}"
+export BUCKET="${BUCKET:-dota-euw4a}"
+export DATASET_FILES="${DATASET_FILES:-datasets/danbooru2019-s/danbooru2019-s-0*}"
 export MODEL_DIR="${MODEL_DIR:-runs}"
 
 cores="$(echo $TPU_NAME | sed 's/^tpu-v[23][-]\([0-9]*\).*$/\1/g')"
