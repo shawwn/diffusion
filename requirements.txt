@@ -1,0 +1,4 @@
+tensorflow-gan==0.0.0.dev0
+tensorflow-hub==0.7.0
+tensorflow-metadata==0.21.1
+tensorflow-probability==0.8.0
