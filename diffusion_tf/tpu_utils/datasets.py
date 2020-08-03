@@ -172,12 +172,14 @@ class TForkDataset:
     max_images=None,     # Maximum number of images to use, None = use all images.
     shuffle_mb=4096,     # Shuffle data within specified window (megabytes), 0 = disable shuffling.
     buffer_mb=256,       # Read buffer size (megabytes).
+    batch_size=1,
   ):
     self.tfr_file           = tfr_file
     self.dtype              = 'int32'
     self.max_images         = max_images
     self.buffer_mb          = buffer_mb
     self.num_classes        = 1         # unconditional
+    self.batch_size         = batch_size
 
     # Determine shape and resolution.
     self.resolution = resolution
@@ -185,7 +187,26 @@ class TForkDataset:
     self.image_shape = [self.resolution, self.resolution, 3]
 
   def _train_input_fn(self, params, one_pass: bool):
-      dset = self._make_dataset(self=self, data_dirs=self.tfr_file)
+      dset = self._make_dataset(
+        data_dirs=self.tfr_file,
+        index=TForkDataset._get_current_host(params),
+        num_hosts=TForkDataset._get_num_hosts(params),
+        buffer_mb=self._buffer_mb,
+      )
+
+      # cache the unparsed image data.
+      dset = dset.cache()
+      # fused shuffle and repeat.
+      dset = dset.apply(tf.contrib.data.shuffle_and_repeat(1024 * 16))
+      # parse the image data.
+      dset = dset.apply(
+        tf.contrib.data.map_and_batch(
+          dataset_parser_static,
+          batch_size=self.batch_size,
+          num_parallel_batches=TForkDataset._get_num_cores(params),
+          drop_remainder=True))
+      # prefetch the dataset.
+      dset = dset.prefetch(tf.data.experimental.AUTOTUNE)
       return dset
 
   @staticmethod
@@ -214,9 +235,11 @@ class TForkDataset:
 
 
   @staticmethod
-  def _make_dataset(self, data_dirs, index=0, num_hosts=1,
-                   seed=0, shuffle_filenames=True,
-                   num_parallel_calls = 64, batch_size = 1):
+  def _make_dataset(data_dirs, index=0, num_hosts=1,
+                   seed=None, shuffle_filenames=False,
+                   num_parallel_calls = 64,
+                   filename_shuffle_buffer_size = 100000,
+                   buffer_mb = 256):
 
     if shuffle_filenames:
       assert seed is not None
@@ -234,9 +257,15 @@ class TForkDataset:
     dataset = dataset.shard(num_hosts, index)
     print(dataset)
 
+    # Memoize the filename list to avoid lots of calls to list_files.
+    dataset = dataset.cache()
+
+    # For mixing multiple datasets, shuffle list of filenames.
+    dataset = dataset.shuffle(filename_shuffle_buffer_size, seed=seed)
+
     def fetch_dataset(filename):
       buffer_size = 8 * 1024 * 1024  # 8 MiB per file
-      dataset = tf.data.TFRecordDataset(filename, buffer_size=self.buffer_mb<<20)
+      dataset = tf.data.TFRecordDataset(filename, buffer_size=buffer_mb<<20)
       return dataset
 
     # Read the data from disk in parallel
@@ -244,14 +273,7 @@ class TForkDataset:
         tf.contrib.data.parallel_interleave(
             fetch_dataset, cycle_length=num_parallel_calls, sloppy=True))
 
-    dataset = dataset.map(
-        dataset_parser_static,
-        num_parallel_calls=num_parallel_calls)
-
-    dset = dataset.shuffle(50000)
-    dset = dset.batch(batch_size, drop_remainder=True)
-    dset = dset.prefetch(tf.data.experimental.AUTOTUNE)
-    return dset
+    return dataset
 
 
   def train_input_fn(self, params):
