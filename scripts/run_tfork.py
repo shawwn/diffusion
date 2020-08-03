@@ -86,6 +86,7 @@ def evaluation(
     model_dir, tpu_name, bucket_name_prefix, once=False, dump_samples_only=False, total_bs=128,
     tfr_file='tensorflow_datasets/lsun/church-r08.tfrecords', samples_dir=None, num_inception_samples=2048,
 ):
+  #region = utils.get_gcp_region()
   tfr_file = 'gs://{}/{}'.format(bucket_name_prefix, tfr_file)
   kwargs = tpu_utils.load_train_kwargs(model_dir)
   print('loaded kwargs:', kwargs)
@@ -113,13 +114,14 @@ def evaluation(
 
 
 def train(
-    exp_name, tpu_name, bucket_name_prefix, model_name='unet2d16b2c112244', dataset='lsun',
+    exp_name, tpu_name, bucket_name_prefix, model_name='unet2d16b2c112244', dataset='tfork',
     optimizer='adam', total_bs=64, grad_clip=1., lr=2e-5, warmup=5000,
     num_diffusion_timesteps=1000, beta_start=0.0001, beta_end=0.02, beta_schedule='linear', loss_type='noisepred',
     dropout=0.0, randflip=1, block_size=1,
     tfr_file='tensorflow_datasets/lsun/church/church-r08.tfrecords', log_dir='logs',
     warm_start_model_dir=None
 ):
+  #region = utils.get_gcp_region()
   tfr_file = 'gs://{}/{}'.format(bucket_name_prefix, tfr_file)
   log_dir = 'gs://{}/{}'.format(bucket_name_prefix, log_dir)
   print("tfr_file:", tfr_file)

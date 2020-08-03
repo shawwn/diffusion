@@ -127,11 +127,146 @@ class LsunDataset:
     data.set_shape(self.image_shape)
     return pack(image=data, label=tf.constant(0, dtype=tf.int32))
 
+def dataset_parser_static(record):
+    """Parses an image and its label from a serialized ResNet-50 TFExample.
+
+        This only decodes the image, which is prepared for caching.
+
+    Args:
+        value: serialized string containing an ImageNet TFExample.
+
+    Returns:
+        Returns a tuple of (image, label) from the TFExample.
+    """
+    keys_to_features = {
+        'image/encoded': tf.FixedLenFeature((), tf.string, ''),
+        'image/format': tf.FixedLenFeature((), tf.string, 'jpeg'),
+        'image/class/label': tf.FixedLenFeature([], tf.int64, -1),
+        'image/class/embedding': tf.VarLenFeature(tf.float32),
+        'image/width': tf.FixedLenFeature([], tf.int64, -1),
+        'image/height': tf.FixedLenFeature([], tf.int64, -1),
+        'image/filename': tf.FixedLenFeature([], tf.string, ''),
+        'image/class/text': tf.FixedLenFeature([], tf.string, ''),
+        'image/object/bbox/xmin': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/ymin': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/xmax': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/bbox/ymax': tf.VarLenFeature(dtype=tf.float32),
+        'image/object/class/label': tf.VarLenFeature(dtype=tf.int64),
+    }
+
+    parsed = tf.parse_single_example(record, keys_to_features)
+    image_bytes = tf.reshape(parsed['image/encoded'], shape=[])
+    image = tf.io.decode_image(image_bytes, 3)
+    image = tf.cast(image, tf.float32) / 255.0
+    image = tf.image.resize_image_with_pad(image, target_height=256, target_width=256, method=tf.image.ResizeMethod.AREA)
+    image = tf.image.convert_image_dtype(image, tf.uint8)
+    data = tf.cast(image, tf.int32)
+    return pack(image=data, label=tf.constant(0, dtype=tf.int32))
+class TForkDataset:
+  def __init__(self,
+    tfr_file,            # Path to tfrecord file.
+    resolution=256,      # Dataset resolution.
+    max_images=None,     # Maximum number of images to use, None = use all images.
+    shuffle_mb=4096,     # Shuffle data within specified window (megabytes), 0 = disable shuffling.
+    buffer_mb=256,       # Read buffer size (megabytes).
+  ):
+    """Adapted from https://github.com/NVlabs/stylegan2/blob/master/training/dataset.py.
+    Use StyleGAN2 dataset_tool.py to generate tf record files.
+    """
+    self.tfr_file           = tfr_file
+    self.dtype              = 'int32'
+    self.max_images         = max_images
+    self.buffer_mb          = buffer_mb
+    self.num_classes        = 1         # unconditional
+
+    # Determine shape and resolution.
+    self.resolution = resolution
+    self.resolution_log2 = int(np.log2(self.resolution))
+    self.image_shape = [self.resolution, self.resolution, 3]
+
+  def _train_input_fn(self, params, one_pass: bool):
+      dset = self._make_dataset(self=self, data_dirs=self.tfr_file)
+      return dset
+
+  @staticmethod
+  def _get_current_host(self, params):
+    # TODO(dehao): Replace the following with params['context'].current_host
+    if 'context' in params:
+      return params['context'].current_input_fn_deployment()[1]
+    elif 'dataset_index' in params:
+      return params['dataset_index']
+    else:
+      return 0
+
+  @staticmethod
+  def _get_num_hosts(self, params):
+    if 'context' in params:
+     return params['context'].num_hosts
+    elif 'dataset_index' in params:
+      return params['dataset_num_shards']
+    else:
+      return 1
+
+  @staticmethod
+  def _get_num_cores(self, params):
+    return 8 * self._get_num_hosts(params)
+
+
+
+  @staticmethod
+  def _make_dataset(self, data_dirs, index=0, num_hosts=1,
+                   seed=0, shuffle_filenames=True,
+                   num_parallel_calls = 64):
+
+    if shuffle_filenames:
+      assert seed is not None
+
+    file_patterns = [x.strip() for x in data_dirs.split(',') if len(x.strip()) > 0]
+
+    # For multi-host training, we want each hosts to always process the same
+    # subset of files.  Each host only sees a subset of the entire dataset,
+    # allowing us to cache larger datasets in memory.
+    dataset = None
+    for pattern in file_patterns:
+      x = tf.data.Dataset.list_files(pattern, shuffle=shuffle_filenames, seed=seed)
+      dataset = x if dataset is None else dataset.concatenate(x)
+    dataset = dataset.shard(num_hosts, index)
+
+    def fetch_dataset(filename):
+      buffer_size = 8 * 1024 * 1024  # 8 MiB per file
+      dataset = tf.data.TFRecordDataset(filename, buffer_size=self.buffer_mb<<20)
+      return dataset
+
+    # Read the data from disk in parallel
+    dataset = dataset.apply(
+        tf.contrib.data.parallel_interleave(
+            fetch_dataset, cycle_length=num_parallel_calls, sloppy=True))
+
+    dataset = dataset.map(
+        dataset_parser_static,
+        num_parallel_calls=num_parallel_calls)
+
+    return dataset
+
+
+  def train_input_fn(self, params):
+    return self._train_input_fn(params, one_pass=False)
+
+  def train_one_pass_input_fn(self, params):
+    return self._train_input_fn(params, one_pass=True)
+
+  def eval_input_fn(self, params):
+    return None
+
+
+
+
 
 DATASETS = {
   "cifar10": functools.partial(SimpleDataset, name="cifar10"),
   "celebahq256": functools.partial(SimpleDataset, name="celebahq256"),
   "lsun": LsunDataset,
+  "tfork": TForkDataset,
 }
 
 
@@ -141,14 +276,14 @@ def get_dataset(name, *, tfds_data_dir=None, tfr_file=None, seed=547):
     raise ValueError("Dataset %s is not available." % name)
   kwargs = {}
 
-  if name == 'lsun':
+  if name == 'lsun' or name == 'tfork':
     # LsunDataset takes the path to the tf record, not a directory
     assert tfr_file is not None
     kwargs['tfr_file'] = tfr_file
   else:
     kwargs['tfds_data_dir'] = tfds_data_dir
 
-  if name not in ['lsun', *SimpleDataset.DATASET_NAMES]:
+  if name not in ['lsun', 'tfork', *SimpleDataset.DATASET_NAMES]:
     kwargs['seed'] = seed
 
   return DATASETS[name](**kwargs)
