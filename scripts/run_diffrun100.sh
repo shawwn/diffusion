@@ -43,8 +43,8 @@ while true; do
     echo "Not recreating TPU."
     sleep 30
   else
-    echo "Recreating TPU in 30s."
-    sleep 30
+    echo "Recreating TPU in 120s."
+    sleep 120
     # sudo pip3 install -U tpudiepie
     pu recreate "$TPU_NAME" --yes
   fi
