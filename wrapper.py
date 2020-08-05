@@ -47,6 +47,7 @@ def reroute(addr, host=None):
 
 class TPUClusterResolver(BaseTPUClusterResolver):
   def __init__(self, *args, host=None, node_count=None, node_offset=None, **kws):
+    kws['project'] = kws.pop('project', 'gpt-2-15b-poetry')
     super(TPUClusterResolver, self).__init__(*args, **kws)
     if host is None:
       host = _tpu_host()
