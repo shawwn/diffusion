@@ -146,7 +146,7 @@ if __name__ == '__main__':
     devices = sess.list_devices()
     num_cores = len([x for x in devices if ':TPU:' in x.name])
     print(cluster_def)
-    print('ip: %s', master, num_cores)
+    print('cores: %d ip: %s' % (num_cores, master))
     r = sess.run
     from tensorflow.python.tpu import tpu as tpu_ops
     from tensorflow.compiler.tf2xla.python import xla
