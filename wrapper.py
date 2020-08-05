@@ -136,7 +136,7 @@ if __name__ == '__main__':
     cluster_spec = None
     cluster_def = None
     if 'TPU_NAME' in os.environ:
-      res = resolver.TPUClusterResolver(os.environ['TPU_NAME'])
+      res = TPUClusterResolver(os.environ['TPU_NAME'])
       master = res.get_master()
       cluster_spec = res.cluster_spec()
       if cluster_spec:
